@@ -15,52 +15,51 @@ class LocalRepositoryPlugin implements PluginInterface
         $paths = $extra['local-repositories'] ?? [];
 
         if (!is_array($paths) || empty($paths)) {
-            $io->debug("No local repositories defined in extra.local-repositories.");
+            $io->write("<info>No local repositories defined in extra.local-repositories.</info>");
             return;
         }
 
         $repoManager = $composer->getRepositoryManager();
         $config = $composer->getConfig();
-        $stabilityFlags = $composer->getPackage()->getStabilityFlags();
+		$stabilityFlags = $composer->getPackage()->getStabilityFlags();
 
-        foreach ($paths as $path) {
+        foreach ($paths as $path)
+		{
             $absolutePath = realpath($path);
 
-            if ($absolutePath && is_dir($absolutePath)) {
-                $io->write("<info>Local repository found: $absolutePath</info>");
+            foreach (glob($absolutePath . '/*', GLOB_ONLYDIR) as $subdir)
+			{
+				$composerJson = $subdir . '/composer.json';
 
-                $repoManager->addRepository(
+                if (!is_file($composerJson)) {
+                    $io->debug("Skipping directory (no composer.json): $subdir");
+                    continue;
+                }
+
+                $pkgName = null;
+                $json = json_decode(file_get_contents($composerJson), true);
+                if (!empty($json['name'])) {
+                    $pkgName = $json['name'];
+                    $stabilityFlags[$pkgName] = Package::STABILITY_DEV;
+					$pkgName .= "@".$json['version'];
+                }
+
+                $io->write("<info>Adding local package: " . ($pkgName ?? $subdir) . "</info>");
+
+                $repoManager->prependRepository(
                     new PathRepository(
                         [
                             'type' => 'path',
-                            'url' => $absolutePath,
+                            'url' => $subdir,
                             'options' => ['symlink' => true]
                         ],
                         $io,
                         $config
                     )
                 );
-
-                $composerJson = $absolutePath . '/composer.json';
-                if (is_file($composerJson)) {
-                    $json = json_decode(file_get_contents($composerJson), true);
-                    if (!empty($json['name'])) {
-                        $packageName = $json['name'];
-                        $io->debug("Allowing @dev for local package: $packageName");
-                        $stabilityFlags[$packageName] = Package::STABILITY_DEV;
-                    } else {
-                        $io->debug("No name found in $composerJson, skipping stability flag.");
-                    }
-                } else {
-                    $io->debug("No composer.json found in $absolutePath, skipping stability flag.");
-                }
-
-            } else {
-                $io->debug("Local repository not found: $path");
-            }
+			}
         }
-
-        $composer->getPackage()->setStabilityFlags($stabilityFlags);
+		$composer->getPackage()->setStabilityFlags($stabilityFlags);
     }
 
     public function deactivate(Composer $composer, IOInterface $io) {}
