@@ -44,7 +44,7 @@ class LocalRepositoryPlugin implements PluginInterface
 					$pkgName .= "@".$json['version'];
                 }
 
-                $io->write("<info>Adding local package: " . ($pkgName ?? $subdir) . "</info>");
+                $io->debug("Adding local package: " . ($pkgName ?? $subdir));
 
                 $repoManager->prependRepository(
                     new PathRepository(
