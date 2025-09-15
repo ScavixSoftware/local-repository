@@ -1,0 +1,16 @@
+{
+  "name": "scavix/local-repository",
+  "description": "Composer-Plugin to embed a local path as repository.",
+  "type": "composer-plugin",
+  "autoload": {
+    "psr-4": {
+      "Scavix\\LocalRepository\\": "src/"
+    }
+  },
+  "extra": {
+    "class": "Scavix\\LocalRepository\\LocalRepositoryPlugin"
+  },
+  "require": {
+    "composer-plugin-api": "^2.0"
+  }
+}
